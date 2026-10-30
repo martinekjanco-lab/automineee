@@ -1,7 +1,7 @@
 ```yaml
 name: Build Automine Mod
 
-on:
+'on':
   push:
     branches:
       - main
@@ -29,13 +29,36 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Find Gradle project
+        id: project
+        shell: bash
+        run: |
+          if [ -f "settings.gradle" ] || [ -f "settings.gradle.kts" ] || [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
+            echo "dir=." >> "$GITHUB_OUTPUT"
+          elif [ -f "automine-mod/settings.gradle" ] || [ -f "automine-mod/build.gradle" ]; then
+            echo "dir=automine-mod" >> "$GITHUB_OUTPUT"
+          else
+            echo "Error: Could not find the Gradle project."
+            ls -la
+            exit 1
+          fi
+
       - name: Build Automine Mod
-        run: gradle build
+        working-directory: ${{ steps.project.outputs.dir }}
+        shell: bash
+        run: |
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew build
+          else
+            gradle build
+          fi
 
       - name: Upload built mod
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: automine-mod
-          path: build/libs/*.jar
+          path: ${{ steps.project.outputs.dir }}/build/libs/*.jar
+          if-no-files-found: error
 ```
